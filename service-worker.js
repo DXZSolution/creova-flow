@@ -1,14 +1,12 @@
-const CACHE_NAME = "creative-ai-studio-v6";
+const CACHE_NAME = "creova-flow-v7";
 
 const APP_SHELL = [
-    "./",
-    "./index.php",
     "./offline.html",
     "./manifest.json",
     "./assets/css/style.css",
     "./assets/css/bootstrap.min.css",
     "./assets/js/bootstrap.bundle.min.js",
-    "./assets/js/app.js",
+    "./assets/js/flow.js",
     "./assets/js/db.js",
     "./icons/icon-192.png",
     "./icons/icon-512.png"
@@ -41,8 +39,41 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+    const url = new URL(request.url);
+
+    if (url.origin !== self.location.origin) {
+        return;
+    }
+
+    if (url.pathname.indexOf("/api/") !== -1 || url.pathname.endsWith(".php") || url.pathname.endsWith(".js")) {
+        event.respondWith(networkFirst(request));
+        return;
+    }
+
     event.respondWith(fromCacheFirst(request));
 });
+
+async function networkFirst(request) {
+    try {
+        return await fetch(request);
+    } catch (error) {
+        const cached = await caches.match(request);
+
+        if (cached) {
+            return cached;
+        }
+
+        if (request.mode === "navigate") {
+            const offlinePage = await caches.match("./offline.html");
+
+            if (offlinePage) {
+                return offlinePage;
+            }
+        }
+
+        throw error;
+    }
+}
 
 async function fromCacheFirst(request) {
     const cached = await caches.match(request);

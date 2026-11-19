@@ -1,0 +1,140 @@
+<?php
+
+require __DIR__ . '/lib/flow.php';
+flow_boot();
+
+try {
+    $current = flow_current_user();
+} catch (Throwable $error) {
+    http_response_code(500);
+    echo 'No se pudo abrir el almacén de Creova Flow.';
+    exit;
+}
+
+if (!$current) {
+    header('Location: acceso.php');
+    exit;
+}
+
+if ($current['rol'] === 'admin') {
+    header('Location: index.php');
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi espacio · Creova Flow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.png">
+    <meta name="theme-color" content="#0b0b0b">
+</head>
+<body>
+<div id="splash" class="splash" role="status" aria-live="polite">
+    <img src="icons/icon-192.png" alt="">
+    <h1>Creova Flow</h1>
+    <p>Tu espacio de servicios</p>
+</div>
+
+<div class="app-container">
+    <aside class="sidebar">
+        <h3>Creova <span>Flow.</span></h3>
+        <a class="sidebar-site" href="inicio.php">Ver sitio público</a>
+        <p class="sidebar-label">Mi cuenta</p>
+        <nav>
+            <a href="#" data-section="inicio">Inicio</a>
+            <a href="#" data-section="ofertas">Ofertas</a>
+            <a href="#" data-section="proyectos">Mis proyectos</a>
+            <a href="#" data-section="solicitudes">Mis solicitudes</a>
+            <a href="#" data-section="notificaciones">Notificaciones <span id="unreadBadge" class="nav-badge d-none">0</span></a>
+            <a href="#" data-section="perfil">Perfil</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <button id="notificationBtn" class="btn btn-outline-light" type="button">Activar notificaciones</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h4>Portal</h4>
+                <span id="welcomeLine">Bienvenido a Creova Flow</span>
+            </div>
+            <div class="topbar-user">
+                <strong id="currentUserName"><?= flow_h($current['nombre']) ?></strong>
+                <button id="logoutBtn" class="btn btn-outline-light" type="button">Salir</button>
+            </div>
+        </header>
+        <div id="appAlert" class="app-alert d-none" role="status"></div>
+
+        <section id="inicio" class="content-section">
+            <span class="panel-label">Tu espacio</span>
+            <h2 id="homeTitle">Hola.</h2>
+            <p>Consulta ofertas, pide un servicio o revisa el estado de lo que ya está en marcha.</p>
+            <div class="row g-3 mt-4" id="homeStats"></div>
+            <div class="mt-5">
+                <h4 class="mb-3">Avisos recientes</h4>
+                <div id="homeNotices"></div>
+            </div>
+        </section>
+
+        <section id="ofertas" class="content-section d-none">
+            <span class="panel-label">Catálogo</span>
+            <h2>Ofertas</h2>
+            <p>Elige si quieres solicitar el servicio, suscribirte, iniciar un proyecto o pedir información.</p>
+            <div class="mt-4" id="offerList"></div>
+        </section>
+
+        <section id="proyectos" class="content-section d-none">
+            <span class="panel-label">Seguimiento</span>
+            <h2>Mis proyectos</h2>
+            <p>Aquí aparece el trabajo relacionado con tus solicitudes y suscripciones.</p>
+            <div class="mt-4" id="projectList"></div>
+        </section>
+
+        <section id="solicitudes" class="content-section d-none">
+            <span class="panel-label">Pedidos</span>
+            <h2>Mis solicitudes</h2>
+            <p>Una solicitud pide revisión. Una suscripción te incorpora a un servicio recurrente y se ve en Mis proyectos.</p>
+            <div class="mt-4" id="requestList"></div>
+        </section>
+
+        <section id="notificaciones" class="content-section d-none">
+            <span class="panel-label">Actividad</span>
+            <h2>Notificaciones</h2>
+            <p>Puedes marcar un aviso como leído. El enlace abre la oferta, la solicitud o el proyecto.</p>
+            <button id="markReadBtn" class="btn btn-outline-light mb-4" type="button">Marcar todas como leídas</button>
+            <div id="notificationList"></div>
+        </section>
+
+        <section id="perfil" class="content-section d-none">
+            <span class="panel-label">Cuenta</span>
+            <h2>Perfil</h2>
+            <p>Actualiza tu nombre, correo o contraseña.</p>
+            <form id="profileForm" class="detail-panel mt-4">
+                <label for="profileName">Nombre</label>
+                <input id="profileName" class="form-control mb-3" required>
+                <label for="profileEmail">Correo</label>
+                <input id="profileEmail" class="form-control mb-3" type="email" required>
+                <label for="profilePassword">Nueva contraseña</label>
+                <input id="profilePassword" class="form-control mb-3" type="password" autocomplete="new-password" placeholder="Déjala vacía si no quieres cambiarla">
+                <label for="profilePassword2">Confirmar contraseña</label>
+                <input id="profilePassword2" class="form-control mb-3" type="password" autocomplete="new-password">
+                <button class="btn btn-primary" type="submit">Guardar perfil</button>
+            </form>
+        </section>
+    </main>
+</div>
+
+<script src="assets/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/flow.js"></script>
+<script src="assets/js/portal.js"></script>
+</body>
+</html>

@@ -84,14 +84,14 @@
 
             <div class="d-flex flex-column flex-lg-row gap-2">
 
-                <a href="index.php"
+                <a href="acceso.php"
                     class="btn btn-outline-custom">
                     Iniciar sesión
                 </a>
 
-                <a href="#contacto"
+                <a href="acceso.php#registro"
                     class="btn btn-light-custom">
-                    Crear proyecto
+                    Crear cuenta
                 </a>
 
             </div>
@@ -872,10 +872,10 @@
 
                     </ul>
 
-                    <a href="#contacto"
+                    <a href="acceso.php#registro"
                         class="btn btn-outline-custom w-100">
 
-                        Consultar propuesta
+                        Crear cuenta
 
                     </a>
 
@@ -919,10 +919,10 @@
 
                     </ul>
 
-                    <a href="#contacto"
+                    <a href="acceso.php#registro"
                         class="btn btn-accent w-100">
 
-                        Consultar propuesta
+                        Crear cuenta
 
                     </a>
 
@@ -966,10 +966,10 @@
 
                     </ul>
 
-                    <a href="#contacto"
+                    <a href="acceso.php#registro"
                         class="btn btn-outline-custom w-100">
 
-                        Consultar propuesta
+                        Crear cuenta
 
                     </a>
 
@@ -1011,6 +1011,13 @@
                 class="btn btn-light-custom">
 
                 Contactar a Creova Flow
+
+            </a>
+
+            <a href="acceso.php#registro"
+                class="btn btn-outline-custom ms-2">
+
+                Crear cuenta
 
             </a>
 
