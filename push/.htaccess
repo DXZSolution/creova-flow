@@ -1,0 +1,19 @@
+<Files "vapid.json">
+    Require all denied
+</Files>
+
+<Files "subscriptions.json">
+    Require all denied
+</Files>
+
+<Files "config.php">
+    Require all denied
+</Files>
+
+<Files "composer.json">
+    Require all denied
+</Files>
+
+<Files "composer.lock">
+    Require all denied
+</Files>
