@@ -31,7 +31,7 @@ if ($current['rol'] === 'admin') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=9">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icons/icon-192.png">
     <meta name="theme-color" content="#0b0b0b">
@@ -49,16 +49,12 @@ if ($current['rol'] === 'admin') {
         <a class="sidebar-site" href="inicio.php">Ver sitio público</a>
         <p class="sidebar-label">Mi cuenta</p>
         <nav>
-            <a href="#" data-section="inicio">Inicio</a>
-            <a href="#" data-section="ofertas">Ofertas</a>
-            <a href="#" data-section="proyectos">Mis proyectos</a>
-            <a href="#" data-section="solicitudes">Mis solicitudes</a>
-            <a href="#" data-section="notificaciones">Notificaciones <span id="unreadBadge" class="nav-badge d-none">0</span></a>
-            <a href="#" data-section="perfil">Perfil</a>
+            <a href="#" data-section="inicio"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7"></path><path d="M6 10.5V20h12v-9.5"></path></svg>Inicio</a>
+            <a href="#" data-section="ofertas"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12V5h7l9 9-7 7-9-9z"></path><circle cx="8.5" cy="8.5" r="1.2"></circle></svg>Ofertas</a>
+            <a href="#" data-section="proyectos"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5h6l2 2h10v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19V7.5z"></path></svg>Mis proyectos</a>
+            <a href="#" data-section="solicitudes"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l5 5V20a1.5 1.5 0 0 1-1.5 1.5h-10.5A1.5 1.5 0 0 1 5.5 20V5A1.5 1.5 0 0 1 7 3.5z"></path><path d="M14 3.5V9h5.5"></path><path d="M8 13h8M8 17h5"></path></svg>Mis solicitudes</a>
+            <a href="#" data-section="perfil"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19.5v-1A4.5 4.5 0 0 1 9.5 14h5a4.5 4.5 0 0 1 4.5 4.5v1"></path></svg>Perfil</a>
         </nav>
-        <div class="sidebar-bottom">
-            <button id="notificationBtn" class="btn btn-outline-light" type="button">Activar notificaciones</button>
-        </div>
     </aside>
 
     <main class="main-content">
@@ -68,6 +64,20 @@ if ($current['rol'] === 'admin') {
                 <span id="welcomeLine">Bienvenido a Creova Flow</span>
             </div>
             <div class="topbar-user">
+                <div class="notify-wrap">
+                    <button id="notifyToggle" class="notify-btn" type="button" aria-label="Notificaciones" aria-expanded="false">
+                        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 7 2 7 2 7H4s2 0 2-7"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+                        <span id="unreadBadge" class="notify-count d-none">0</span>
+                    </button>
+                    <div id="notifyPanel" class="notify-panel d-none">
+                        <div class="notify-head">
+                            <strong>Notificaciones</strong>
+                            <button id="markReadBtn" type="button">Marcar leídas</button>
+                        </div>
+                        <div id="notificationList" class="notify-list"></div>
+                        <button id="notificationBtn" class="btn btn-outline-light w-100" type="button">Activar en este dispositivo</button>
+                    </div>
+                </div>
                 <strong id="currentUserName"><?= flow_h($current['nombre']) ?></strong>
                 <button id="logoutBtn" class="btn btn-outline-light" type="button">Salir</button>
             </div>
@@ -106,14 +116,6 @@ if ($current['rol'] === 'admin') {
             <div class="mt-4" id="requestList"></div>
         </section>
 
-        <section id="notificaciones" class="content-section d-none">
-            <span class="panel-label">Actividad</span>
-            <h2>Notificaciones</h2>
-            <p>Puedes marcar un aviso como leído. El enlace abre la oferta, la solicitud o el proyecto.</p>
-            <button id="markReadBtn" class="btn btn-outline-light mb-4" type="button">Marcar todas como leídas</button>
-            <div id="notificationList"></div>
-        </section>
-
         <section id="perfil" class="content-section d-none">
             <span class="panel-label">Cuenta</span>
             <h2>Perfil</h2>
@@ -134,7 +136,7 @@ if ($current['rol'] === 'admin') {
 </div>
 
 <script src="assets/js/bootstrap.bundle.min.js"></script>
-<script src="assets/js/flow.js"></script>
-<script src="assets/js/portal.js"></script>
+<script src="assets/js/flow.js?v=9"></script>
+<script src="assets/js/portal.js?v=9"></script>
 </body>
 </html>

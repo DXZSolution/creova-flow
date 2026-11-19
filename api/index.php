@@ -48,13 +48,7 @@ if ($action === 'login') {
     $user = flow_transaction(function ($db) use ($body) {
         $correo = strtolower(trim($body['correo'] ?? ''));
         $password = (string) ($body['password'] ?? '');
-        $found = null;
-
-        foreach ($db['users'] as $account) {
-            if (strtolower($account['correo']) === $correo) {
-                $found = $account;
-            }
-        }
+        $found = flow_user_by_email($db, $correo);
 
         if (!$found || !password_verify($password, $found['password'])) {
             throw new FlowError('Correo o contraseña incorrectos.', 401);

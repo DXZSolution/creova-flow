@@ -76,12 +76,18 @@ if ($current) {
             <button class="btn btn-primary w-100" type="submit">Crear cuenta</button>
         </form>
 
+        <?php
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        $localDemo = strpos($host, '127.0.0.1') === 0 || strpos($host, 'localhost') === 0;
+        if ($localDemo):
+        ?>
         <p class="demo-note">Cuenta de demostración del administrador: admin@creovaflow.local · CreovaAdmin2026. Cámbiala antes de usar el sistema con clientes reales.</p>
+        <?php endif; ?>
         <a class="auth-back" href="inicio.php">Volver al sitio</a>
     </section>
 </main>
 
-<script src="assets/js/flow.js"></script>
+<script src="assets/js/flow.js?v=9"></script>
 <script src="assets/js/acceso.js"></script>
 </body>
 </html>

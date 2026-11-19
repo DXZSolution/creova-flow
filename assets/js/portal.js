@@ -51,6 +51,11 @@ function applyQuery() {
     state.projectId = 0;
     state.requestId = 0;
 
+    if (state.section === "notificaciones") {
+        state.section = "inicio";
+        openNotifyPanel();
+    }
+
     if (state.section === "ofertas") {
         state.offerId = id;
     } else if (state.section === "proyectos") {
@@ -527,8 +532,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("markReadBtn").addEventListener("click", async () => {
         try {
             await run("notification-read-all", {});
-            state.section = "notificaciones";
-            paintSection();
+            openNotifyPanel();
         } catch (error) {
             showAlert(error.message);
         }

@@ -268,10 +268,16 @@ async function activatePush() {
         });
     }
 
+    if (!FlowApi.token) {
+        await FlowApi.request("session");
+    }
+
     const response = await fetch("push/subscribe.php", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Creova-Token": FlowApi.token
         },
         body: new URLSearchParams({
             payload: btoa(unescape(encodeURIComponent(JSON.stringify(subscription))))
@@ -290,6 +296,39 @@ async function activatePush() {
         throw new Error(result.message || "No se pudo registrar el dispositivo.");
     }
 }
+
+function openNotifyPanel() {
+    const panel = document.getElementById("notifyPanel");
+    const toggle = document.getElementById("notifyToggle");
+
+    if (!panel || !toggle) {
+        return;
+    }
+
+    panel.classList.remove("d-none");
+    toggle.setAttribute("aria-expanded", "true");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const toggle = document.getElementById("notifyToggle");
+    const panel = document.getElementById("notifyPanel");
+
+    if (!toggle || !panel) {
+        return;
+    }
+
+    toggle.addEventListener("click", event => {
+        event.stopPropagation();
+        const willOpen = panel.classList.contains("d-none");
+        panel.classList.toggle("d-none", !willOpen);
+        toggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+    panel.addEventListener("click", event => event.stopPropagation());
+    document.addEventListener("click", () => {
+        panel.classList.add("d-none");
+        toggle.setAttribute("aria-expanded", "false");
+    });
+});
 
 window.addEventListener("load", hideSplash);
 

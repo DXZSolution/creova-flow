@@ -12,7 +12,7 @@ try {
 }
 
 if (!$current) {
-    header('Location: acceso.php');
+    header('Location: inicio.php');
     exit;
 }
 
@@ -31,7 +31,7 @@ if ($current['rol'] !== 'admin') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=9">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -53,17 +53,13 @@ if ($current['rol'] !== 'admin') {
         <a class="sidebar-site" href="inicio.php">Ver sitio público</a>
         <p class="sidebar-label">Administración</p>
         <nav>
-            <a href="#" class="active" data-section="inicio">Inicio</a>
-            <a href="#" data-section="proyectos">Proyectos</a>
-            <a href="#" data-section="ofertas">Ofertas</a>
-            <a href="#" data-section="biblioteca">Biblioteca</a>
-            <a href="#" data-section="usuarios">Usuarios</a>
-            <a href="#" data-section="notificaciones">Notificaciones <span id="unreadBadge" class="nav-badge d-none">0</span></a>
-            <a href="#" data-section="configuracion">Configuración</a>
+            <a href="#" class="active" data-section="inicio"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7"></path><path d="M6 10.5V20h12v-9.5"></path></svg>Inicio</a>
+            <a href="#" data-section="proyectos"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5h6l2 2h10v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19V7.5z"></path></svg>Proyectos</a>
+            <a href="#" data-section="ofertas"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12V5h7l9 9-7 7-9-9z"></path><circle cx="8.5" cy="8.5" r="1.2"></circle></svg>Ofertas</a>
+            <a href="#" data-section="biblioteca"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h11a3 3 0 0 1 3 3V19H8a3 3 0 0 0-3 3V5.5z"></path><path d="M5 19a3 3 0 0 1 3-3h11"></path></svg>Biblioteca</a>
+            <a href="#" data-section="usuarios"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20"></path><circle cx="10" cy="8" r="3"></circle><path d="M20 20v-1.2a3 3 0 0 0-2.2-2.9"></path><path d="M16.2 5.2a3 3 0 0 1 0 5.6"></path></svg>Usuarios</a>
+            <a href="#" data-section="configuracion"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"></path></svg>Configuración</a>
         </nav>
-        <div class="sidebar-bottom">
-            <button id="notificationBtn" class="btn btn-outline-light" type="button">Activar notificaciones</button>
-        </div>
     </aside>
 
     <main class="main-content">
@@ -73,6 +69,20 @@ if ($current['rol'] !== 'admin') {
                 <span>Ofertas, solicitudes y proyectos</span>
             </div>
             <div class="topbar-user">
+                <div class="notify-wrap">
+                    <button id="notifyToggle" class="notify-btn" type="button" aria-label="Notificaciones" aria-expanded="false">
+                        <svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 7 2 7 2 7H4s2 0 2-7"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+                        <span id="unreadBadge" class="notify-count d-none">0</span>
+                    </button>
+                    <div id="notifyPanel" class="notify-panel d-none">
+                        <div class="notify-head">
+                            <strong>Notificaciones</strong>
+                            <button id="markReadBtn" type="button">Marcar leídas</button>
+                        </div>
+                        <div id="notificationList" class="notify-list"></div>
+                        <button id="notificationBtn" class="btn btn-outline-light w-100" type="button">Activar en este dispositivo</button>
+                    </div>
+                </div>
                 <strong id="currentUserName"><?= flow_h($current['nombre']) ?></strong>
                 <button id="logoutBtn" class="btn btn-outline-light" type="button">Salir</button>
             </div>
@@ -128,14 +138,6 @@ if ($current['rol'] !== 'admin') {
             <h2>Usuarios</h2>
             <p>Consulta quién se registró y qué ofertas pidió o suscribió.</p>
             <div class="mt-4" id="userList"></div>
-        </section>
-
-        <section id="notificaciones" class="content-section d-none">
-            <span class="panel-label">Actividad</span>
-            <h2>Notificaciones</h2>
-            <p>El aviso interno abre la solicitud o el proyecto relacionado.</p>
-            <button id="markReadBtn" class="btn btn-outline-light mb-4" type="button">Marcar todas como leídas</button>
-            <div id="notificationList"></div>
         </section>
 
         <section id="configuracion" class="content-section d-none">
@@ -274,7 +276,7 @@ if ($current['rol'] !== 'admin') {
 
 <script src="assets/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/db.js"></script>
-<script src="assets/js/flow.js"></script>
-<script src="assets/js/admin.js"></script>
+<script src="assets/js/flow.js?v=9"></script>
+<script src="assets/js/admin.js?v=9"></script>
 </body>
 </html>

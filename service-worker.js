@@ -1,4 +1,4 @@
-const CACHE_NAME = "creova-flow-v7";
+const CACHE_NAME = "creova-flow-v9";
 
 const APP_SHELL = [
     "./offline.html",

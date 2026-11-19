@@ -61,6 +61,11 @@ function applyQuery() {
         return;
     }
 
+    if (state.section === "notificaciones") {
+        state.section = "inicio";
+        openNotifyPanel();
+    }
+
     if (state.section === "biblioteca") {
         state.projectId = id;
     } else if (state.section === "ofertas") {
@@ -911,7 +916,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("markReadBtn").addEventListener("click", async () => {
         try {
             await run("notification-read-all", {});
-            state.section = "notificaciones";
+            openNotifyPanel();
         } catch (error) {
             showAlert(error.message);
         }

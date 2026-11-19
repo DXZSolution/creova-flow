@@ -19,7 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="assets/css/landing.css">
+    <link rel="stylesheet" href="assets/css/landing.css?v=8">
 
 </head>
 
@@ -563,20 +563,27 @@
                             stroke-linecap="round"
                             stroke-linejoin="round">
 
-                            <circle cx="12" cy="12" r="9"></circle>
+                            <path d="M4 19V5"></path>
 
-                            <path d="m10 8 6 4-6 4z"></path>
+                            <path d="M4 19h16"></path>
+
+                            <path d="M8 16v-5"></path>
+
+                            <path d="M12 16V8"></path>
+
+                            <path d="M16 16v-3"></path>
 
                         </svg>
 
                     </div>
 
                     <h3>
-                        Análisis de datos 
+                        Análisis de datos
                     </h3>
 
                     <p>
-                        Análisis de datos
+                        Lectura del avance y de los
+                        resultados para decidir el siguiente paso.
                     </p>
 
                 </article>
