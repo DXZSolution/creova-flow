@@ -159,7 +159,7 @@ function projectCard(project, onOpen) {
     edit.className = "btn btn-warning btn-sm";
     edit.textContent = "Editar";
     edit.addEventListener("click", () => openProjectForm(project));
-    card.append(button, edit);
+    card.append(button, edit, deleteProjectButton(project, "btn btn-outline-danger btn-sm"));
     col.appendChild(card);
     return col;
 }
@@ -605,11 +605,34 @@ function renderProjectDetail(project) {
     }
     const edit = document.createElement("button");
     edit.type = "button";
-    edit.className = "btn btn-warning mt-3";
+    edit.className = "btn btn-warning";
     edit.textContent = "Editar datos";
     edit.addEventListener("click", () => openProjectForm(project));
-    panel.appendChild(edit);
+    const actions = document.createElement("div");
+    actions.className = "d-flex flex-wrap gap-2 mt-3";
+    actions.append(edit, deleteProjectButton(project, "btn btn-outline-danger"));
+    panel.appendChild(actions);
     return panel;
+}
+
+function deleteProjectButton(project, className) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.textContent = "Eliminar";
+    button.addEventListener("click", async () => {
+        const name = project.nombre || "este proyecto";
+        if (!window.confirm("¿Eliminar el proyecto \"" + name + "\"? No se puede deshacer.")) {
+            return;
+        }
+        try {
+            state.projectId = 0;
+            await run("project-delete", { id: project.id });
+        } catch (error) {
+            showAlert(error.message);
+        }
+    });
+    return button;
 }
 
 function commentForm(projectId) {

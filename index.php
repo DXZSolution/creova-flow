@@ -277,6 +277,6 @@ if ($current['rol'] !== 'admin') {
 <script src="assets/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/db.js"></script>
 <script src="assets/js/flow.js?v=9"></script>
-<script src="assets/js/admin.js?v=9"></script>
+<script src="assets/js/admin.js?v=10"></script>
 </body>
 </html>

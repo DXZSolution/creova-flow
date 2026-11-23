@@ -1485,6 +1485,27 @@ function flow_save_project($db, $admin, $input)
     return $db;
 }
 
+function flow_delete_project($db, $admin, $projectId)
+{
+    if (($admin['rol'] ?? '') !== 'admin') {
+        throw new FlowError('No tienes permiso para eliminar el proyecto.', 403);
+    }
+
+    $projectId = (int) $projectId;
+    $project = flow_one($db, 'SELECT id FROM proyectos WHERE id = ?', [$projectId]);
+
+    if (!$project) {
+        throw new FlowError('No encontramos ese proyecto.', 404);
+    }
+
+    flow_run($db, 'UPDATE solicitudes SET proyecto_id = NULL WHERE proyecto_id = ?', [$projectId]);
+    flow_run($db, 'UPDATE notificaciones SET proyecto_id = NULL WHERE proyecto_id = ?', [$projectId]);
+    flow_run($db, 'DELETE FROM suscripciones WHERE proyecto_id = ?', [$projectId]);
+    flow_run($db, 'DELETE FROM proyectos WHERE id = ?', [$projectId]);
+
+    return $db;
+}
+
 function flow_add_comment($db, $user, $projectId, $texto)
 {
     $texto = trim((string) $texto);

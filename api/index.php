@@ -159,6 +159,15 @@ $result = flow_transaction(function ($db) use ($action, $body) {
         ];
     }
 
+    if ($action === 'project-delete') {
+        $admin = flow_require($db, 'admin');
+
+        return [
+            'db' => flow_delete_project($db, $admin, (int) ($body['id'] ?? 0)),
+            'out' => 'Proyecto eliminado.',
+        ];
+    }
+
     if ($action === 'comment') {
         $user = flow_require($db);
 
