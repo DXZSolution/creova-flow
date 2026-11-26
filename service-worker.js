@@ -1,23 +1,31 @@
-const CACHE_NAME = "creova-flow-v11";
+const CACHE_NAME = "creova-flow-v12";
 
-const APP_SHELL = [
-    "./shell-admin.html",
-    "./shell-portal.html",
-    "./offline.html",
-    "./manifest.json",
-    "./assets/css/style.css",
-    "./assets/css/bootstrap.min.css",
-    "./assets/js/bootstrap.bundle.min.js",
-    "./assets/js/flow.js",
-    "./assets/js/admin.js",
-    "./assets/js/portal.js",
-    "./assets/js/db.js",
-    "./icons/icon-192.png",
-    "./icons/icon-512.png"
+const PRECACHE = [
+    ["./inicio.php", "./inicio.php?v=12"],
+    ["./shell-admin.html", "./shell-admin.html?v=12"],
+    ["./shell-portal.html", "./shell-portal.html?v=12"],
+    ["./shell-acceso.html", "./shell-acceso.html?v=12"],
+    ["./offline.html", "./offline.html?v=12"],
+    ["./manifest.json", "./manifest.json?v=12"],
+    ["./assets/css/style.css", "./assets/css/style.css?v=12"],
+    ["./assets/css/bootstrap.min.css", "./assets/css/bootstrap.min.css?v=12"],
+    ["./assets/css/landing.css", "./assets/css/landing.css?v=12"],
+    ["./assets/js/bootstrap.bundle.min.js", "./assets/js/bootstrap.bundle.min.js?v=12"],
+    ["./assets/js/flow.js?v=13", "./assets/js/flow.js?v=13"],
+    ["./assets/js/admin.js?v=12", "./assets/js/admin.js?v=12"],
+    ["./assets/js/portal.js?v=11", "./assets/js/portal.js?v=11"],
+    ["./assets/js/acceso.js?v=2", "./assets/js/acceso.js?v=2"],
+    ["./assets/js/db.js", "./assets/js/db.js?v=12"],
+    ["./assets/images/hero-creova.jpg", "./assets/images/hero-creova.jpg?v=12"],
+    ["./assets/images/portfolio-video.jpg", "./assets/images/portfolio-video.jpg?v=12"],
+    ["./assets/images/portfolio-image.jpg", "./assets/images/portfolio-image.jpg?v=12"],
+    ["./assets/images/portfolio-3d.jpg", "./assets/images/portfolio-3d.jpg?v=12"],
+    ["./icons/icon-192.png", "./icons/icon-192.png?v=12"],
+    ["./icons/icon-512.png", "./icons/icon-512.png?v=12"]
 ];
 
-function shellFor(url) {
-    const path = url.pathname;
+function pageFor(url) {
+    const path = url.pathname.replace(/\/+$/, "") || "/";
 
     if (path.endsWith("/index.php")) {
         return "./shell-admin.html";
@@ -27,15 +35,35 @@ function shellFor(url) {
         return "./shell-portal.html";
     }
 
+    if (path.endsWith("/acceso.php")) {
+        return "./shell-acceso.html";
+    }
+
+    if (path === "/" || path.endsWith("/inicio.php")) {
+        return "./inicio.php";
+    }
+
     return "";
 }
 
 self.addEventListener("install", event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(APP_SHELL))
-            .then(() => self.skipWaiting())
-    );
+    event.waitUntil((async () => {
+        const cache = await caches.open(CACHE_NAME);
+
+        await Promise.all(PRECACHE.map(async pair => {
+            const stored = pair[0];
+            const fresh = pair[1];
+            const response = await fetch(fresh, { cache: "reload" });
+
+            if (!response.ok) {
+                throw new Error(stored);
+            }
+
+            await cache.put(stored, response);
+        }));
+
+        await self.skipWaiting();
+    })());
 });
 
 self.addEventListener("activate", event => {
@@ -63,14 +91,18 @@ self.addEventListener("fetch", event => {
         return;
     }
 
-    const shell = request.mode === "navigate" ? shellFor(url) : "";
-
-    if (shell) {
-        event.respondWith(serveShell(shell, request));
+    if (url.pathname.indexOf("/api/") !== -1 || url.pathname.indexOf("/push/") !== -1) {
         return;
     }
 
-    if (url.pathname.indexOf("/api/") !== -1 || url.pathname.endsWith(".php") || url.pathname.endsWith(".js")) {
+    if (request.mode === "navigate") {
+        const page = pageFor(url);
+
+        if (page) {
+            event.respondWith(serveAppPage(event, page));
+            return;
+        }
+
         event.respondWith(networkFirst(request));
         return;
     }
@@ -78,29 +110,50 @@ self.addEventListener("fetch", event => {
     event.respondWith(fromCacheFirst(request));
 });
 
-async function serveShell(shell, request) {
-    const cached = await caches.match(shell);
+async function serveAppPage(event, page) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(page);
+    const update = refreshPage(cache, page);
 
     if (cached) {
+        event.waitUntil(update);
         return cached;
     }
 
-    try {
-        return await fetch(request);
-    } catch (error) {
-        const offlinePage = await caches.match("./offline.html");
+    const fresh = await update;
 
-        if (offlinePage) {
-            return offlinePage;
-        }
-
-        throw error;
+    if (fresh) {
+        return fresh;
     }
+
+    return offlineResponse();
+}
+
+async function refreshPage(cache, page) {
+    try {
+        const response = await fetch(page, { cache: "reload" });
+
+        if (response && response.ok && response.type === "basic") {
+            await cache.put(page, response.clone());
+            return response;
+        }
+    } catch (error) {
+        return null;
+    }
+
+    return null;
 }
 
 async function networkFirst(request) {
     try {
-        return await fetch(request);
+        const response = await fetch(request);
+
+        if (response && response.ok && response.type === "basic") {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(request, response.clone());
+        }
+
+        return response;
     } catch (error) {
         const cached = await caches.match(request, { ignoreSearch: true });
 
@@ -109,11 +162,7 @@ async function networkFirst(request) {
         }
 
         if (request.mode === "navigate") {
-            const offlinePage = await caches.match("./offline.html");
-
-            if (offlinePage) {
-                return offlinePage;
-            }
+            return offlineResponse();
         }
 
         throw error;
@@ -121,7 +170,7 @@ async function networkFirst(request) {
 }
 
 async function fromCacheFirst(request) {
-    const cached = await caches.match(request, { ignoreSearch: true });
+    const cached = await caches.match(request) || await caches.match(request, { ignoreSearch: true });
 
     if (cached) {
         return cached;
@@ -130,7 +179,7 @@ async function fromCacheFirst(request) {
     try {
         const response = await fetch(request);
 
-        if (response && response.ok) {
+        if (response && response.ok && response.type === "basic") {
             const copy = response.clone();
             const cache = await caches.open(CACHE_NAME);
             await cache.put(request, copy);
@@ -138,14 +187,6 @@ async function fromCacheFirst(request) {
 
         return response;
     } catch (error) {
-        if (request.mode === "navigate") {
-            const offlinePage = await caches.match("./offline.html");
-
-            if (offlinePage) {
-                return offlinePage;
-            }
-        }
-
         return new Response(
             "Este recurso no está disponible sin conexión.",
             {
@@ -156,6 +197,21 @@ async function fromCacheFirst(request) {
             }
         );
     }
+}
+
+async function offlineResponse() {
+    const offlinePage = await caches.match("./offline.html");
+
+    if (offlinePage) {
+        return offlinePage;
+    }
+
+    return new Response("Sin conexión.", {
+        status: 503,
+        headers: {
+            "Content-Type": "text/plain; charset=utf-8"
+        }
+    });
 }
 
 self.addEventListener("push", event => {

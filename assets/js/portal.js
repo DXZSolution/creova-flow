@@ -67,6 +67,9 @@ function applyQuery() {
 
 async function refresh() {
     state.data = await FlowApi.request("bootstrap");
+    if (state.data.offline) {
+        showOfflineNotice();
+    }
     setUnread(state.data.notifications.filter(item => !item.leida).length);
     document.getElementById("currentUserName").textContent = state.data.user.nombre;
     document.getElementById("homeTitle").textContent = "Hola, " + state.data.user.nombre + ".";
@@ -568,9 +571,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
+        if (session.offline) {
+            showOfflineNotice();
+        }
+
         applyQuery();
         await refresh();
     } catch (error) {
+        if (error.offline) {
+            window.location.href = "acceso.php";
+            return;
+        }
+
         showAlert(error.message);
     }
 });

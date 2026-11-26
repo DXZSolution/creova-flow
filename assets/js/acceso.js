@@ -85,6 +85,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.location.href = session.user.rol === "admin" ? "index.php" : "portal.php?seccion=ofertas";
         }
     } catch (error) {
-        showMessage(error.message);
+        if (!error.offline) {
+            showMessage(error.message);
+        }
     }
 });

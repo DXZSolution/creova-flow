@@ -78,6 +78,9 @@ function applyQuery() {
 
 async function refresh() {
     state.data = await FlowApi.request("bootstrap");
+    if (state.data.offline) {
+        showOfflineNotice();
+    }
     setUnread(state.data.notifications.filter(item => !item.leida).length);
     document.getElementById("currentUserName").textContent = state.data.user.nombre;
     paintSection();
@@ -1019,14 +1022,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
+        if (session.offline) {
+            showOfflineNotice();
+        }
+
         applyQuery();
         await refresh();
-        const imported = await importLocalProjectsOnce();
+        const imported = session.offline ? 0 : await importLocalProjectsOnce();
         if (imported > 0) {
             showAlert("Se importaron " + imported + " proyectos de este navegador.", true);
             await refresh();
         }
     } catch (error) {
+        if (error.offline) {
+            window.location.href = "inicio.php";
+            return;
+        }
+
         showAlert(error.message);
     }
 });

@@ -45,13 +45,101 @@ const FLOW_LABELS = {
     }
 };
 
+const OFFLINE_KEY = "creovaOfflineCopy";
+
+function readOfflineCopy() {
+    try {
+        return JSON.parse(localStorage.getItem(OFFLINE_KEY) || "null");
+    } catch (error) {
+        return null;
+    }
+}
+
+function rememberOffline(action, data) {
+    if (!data || data.offline || !data.user) {
+        return;
+    }
+
+    const copy = readOfflineCopy() || {};
+
+    if (action === "session") {
+        copy.session = {
+            success: true,
+            user: data.user,
+            token: data.token || ""
+        };
+    }
+
+    if (action === "bootstrap") {
+        copy.bootstrap = data;
+        copy.session = {
+            success: true,
+            user: data.user,
+            token: data.token || (copy.session && copy.session.token) || ""
+        };
+    }
+
+    if (action === "login" || action === "register") {
+        copy.session = {
+            success: true,
+            user: data.user,
+            token: data.token || ""
+        };
+        delete copy.bootstrap;
+    }
+
+    copy.savedAt = new Date().toISOString();
+
+    try {
+        localStorage.setItem(OFFLINE_KEY, JSON.stringify(copy));
+    } catch (error) {
+        return;
+    }
+}
+
+function offlineCopy(action) {
+    const copy = readOfflineCopy();
+
+    if (!copy) {
+        return null;
+    }
+
+    const saved = action === "bootstrap" ? copy.bootstrap : copy.session;
+
+    if (!saved || !saved.user) {
+        return null;
+    }
+
+    return Object.assign({}, saved, { offline: true });
+}
+
+function offlineError() {
+    const error = new Error("Sin conexión. Este cambio espera a que vuelva la red.");
+    error.offline = true;
+    return error;
+}
+
+function showOfflineNotice() {
+    if (document.getElementById("offlineNotice")) {
+        return;
+    }
+
+    const bar = document.createElement("div");
+    bar.id = "offlineNotice";
+    bar.setAttribute("role", "status");
+    bar.textContent = "Sin conexión. Estás viendo la última copia guardada en este dispositivo.";
+    bar.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:2000;background:#34415c;color:#fff;text-align:center;padding:10px 16px;font:14px/1.4 Arial,sans-serif;";
+    document.body.appendChild(bar);
+}
+
 const FlowApi = {
     token: "",
 
     async request(action, options = {}) {
+        const method = options.method || "GET";
         const headers = { Accept: "application/json" };
         const opts = {
-            method: options.method || "GET",
+            method,
             headers,
             credentials: "same-origin"
         };
@@ -62,7 +150,25 @@ const FlowApi = {
             opts.body = JSON.stringify(options.body);
         }
 
-        const response = await fetch("api/index.php?action=" + encodeURIComponent(action), opts);
+        let response;
+
+        try {
+            response = await fetch("api/index.php?action=" + encodeURIComponent(action), opts);
+        } catch (error) {
+            const cached = method === "GET" ? offlineCopy(action) : null;
+
+            if (cached) {
+                if (cached.token) {
+                    this.token = cached.token;
+                }
+
+                showOfflineNotice();
+                return cached;
+            }
+
+            throw offlineError();
+        }
+
         const raw = await response.text();
         let data;
 
@@ -76,6 +182,10 @@ const FlowApi = {
             this.token = data.token;
         }
 
+        if (action === "logout" && response.ok) {
+            localStorage.removeItem(OFFLINE_KEY);
+        }
+
         if (response.status === 401) {
             window.location.href = "acceso.php";
             throw new Error(data.message || "Inicia sesión para continuar.");
@@ -85,6 +195,7 @@ const FlowApi = {
             throw new Error(data.message || "No se pudo completar la operación.");
         }
 
+        rememberOffline(action, data);
         return data;
     }
 };
