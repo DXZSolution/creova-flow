@@ -20,6 +20,8 @@
         rel="stylesheet">
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/landing.css?v=8">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.png">
 
 </head>
 
@@ -1097,6 +1099,13 @@
 
 
 <script src="assets/js/bootstrap.bundle.min.js"></script>
+<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("service-worker.js").catch(() => {});
+        });
+    }
+</script>
 
 </body>
 
