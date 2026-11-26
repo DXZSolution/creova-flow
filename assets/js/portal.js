@@ -284,6 +284,11 @@ function renderOfferDetail(offer) {
 function renderProyectos() {
     const box = document.getElementById("projectList");
     box.innerHTML = "";
+
+    if (!state.projectId) {
+        box.appendChild(projectRequestForm());
+    }
+
     const subs = state.data.subscriptions.filter(item => item.estado === "activa");
     if (subs.length && !state.projectId) {
         const intro = document.createElement("div");
@@ -299,21 +304,76 @@ function renderProyectos() {
         box.appendChild(renderProjectDetail(project));
         return;
     }
-    if (!state.data.projects.length) {
-        box.appendChild(emptyState("Cuando solicites o te suscribas, el proyecto aparecerá aquí."));
+
+    const mine = state.data.projects.filter(item => item.usuarioPrincipal);
+    const open = state.data.projects.filter(item => !item.oferta && !item.usuarioPrincipal);
+
+    if (!mine.length && !open.length) {
+        box.appendChild(emptyState("Cuando solicites un proyecto o una oferta, aparecerá aquí."));
         return;
     }
+
+    if (open.length) {
+        box.appendChild(projectGrid("Proyectos sin oferta", open, true));
+    }
+
+    if (mine.length) {
+        box.appendChild(projectGrid("Tus proyectos", mine, false));
+    }
+}
+
+function projectRequestForm() {
+    const panel = document.createElement("form");
+    panel.className = "detail-panel mb-4";
+    const title = document.createElement("h3");
+    title.textContent = "Solicitar proyecto";
+    const copy = document.createElement("p");
+    copy.textContent = "Pide un proyecto que no depende de una oferta publicada.";
+    const name = document.createElement("input");
+    name.className = "form-control mb-3";
+    name.required = true;
+    name.placeholder = "Nombre del proyecto";
+    const note = document.createElement("textarea");
+    note.className = "form-control mb-3";
+    note.rows = 3;
+    note.required = true;
+    note.placeholder = "Cuéntanos qué necesitas";
+    const button = document.createElement("button");
+    button.className = "btn btn-primary";
+    button.type = "submit";
+    button.textContent = "Solicitar proyecto";
+    panel.append(title, copy, name, note, button);
+    panel.addEventListener("submit", async event => {
+        event.preventDefault();
+        try {
+            await run("project-request", { nombre: name.value, nota: note.value });
+            state.section = "proyectos";
+            state.projectId = 0;
+            paintSection();
+        } catch (error) {
+            showAlert(error.message);
+        }
+    });
+    return panel;
+}
+
+function projectGrid(title, projects, canRequest) {
+    const wrap = document.createElement("div");
+    wrap.className = "mb-4";
+    const heading = document.createElement("h3");
+    heading.className = "mb-3";
+    heading.textContent = title;
     const row = document.createElement("div");
     row.className = "row g-3";
-    state.data.projects.forEach(item => {
+    projects.forEach(item => {
         const col = document.createElement("div");
         col.className = "col-md-6";
         const card = document.createElement("article");
         card.className = "project-card";
-        const title = document.createElement("h5");
-        title.textContent = item.nombre;
+        const name = document.createElement("h5");
+        name.textContent = item.nombre;
         card.append(
-            title,
+            name,
             pill(labelOf("proyecto", item.estado)),
             kv("Oferta", item.oferta ? item.oferta.nombre : "Sin oferta"),
             kv("Actividad", formatWhen(item.ultimaActividad))
@@ -328,10 +388,31 @@ function renderProyectos() {
             renderProyectos();
         });
         card.appendChild(button);
+        if (canRequest) {
+            const ask = document.createElement("button");
+            ask.type = "button";
+            ask.className = "btn btn-primary btn-sm";
+            ask.textContent = "Solicitar este proyecto";
+            ask.addEventListener("click", async () => {
+                const note = window.prompt("Cuéntanos qué necesitas de " + item.nombre);
+                if (!note) {
+                    return;
+                }
+                try {
+                    await run("project-request", { proyectoId: item.id, nota: note });
+                    state.projectId = item.id;
+                    paintSection();
+                } catch (error) {
+                    showAlert(error.message);
+                }
+            });
+            card.appendChild(ask);
+        }
         col.appendChild(card);
         row.appendChild(col);
     });
-    box.appendChild(row);
+    wrap.append(heading, row);
+    return wrap;
 }
 
 function renderProjectDetail(project) {

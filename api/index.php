@@ -116,6 +116,16 @@ $result = flow_transaction(function ($db) use ($action, $body) {
         return ['db' => flow_create_request($db, $user, $body), 'out' => 'Solicitud registrada.'];
     }
 
+    if ($action === 'project-request') {
+        $user = flow_require($db);
+
+        if ($user['rol'] !== 'user') {
+            throw new FlowError('La solicitud de proyecto se registra desde una cuenta de usuario.', 403);
+        }
+
+        return ['db' => flow_request_open_project($db, $user, $body), 'out' => 'Proyecto solicitado.'];
+    }
+
     if ($action === 'request-status') {
         $actor = flow_require($db);
 

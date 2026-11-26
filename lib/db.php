@@ -278,6 +278,7 @@ function flow_schema($db)
             ON suscripciones(usuario_id, oferta_id)
             WHERE estado = 'activa'"
     );
+    flow_relax_request_offer($db);
 }
 
 function flow_schema_mysql($db)
@@ -452,6 +453,8 @@ function flow_schema_mysql($db)
     foreach ($statements as $statement) {
         $db->exec($statement);
     }
+
+    flow_relax_request_offer($db);
 }
 
 function flow_run($db, $sql, $params = [])
@@ -484,6 +487,52 @@ function flow_nid($id)
     $id = (int) $id;
 
     return $id > 0 ? $id : null;
+}
+
+function flow_relax_request_offer($db)
+{
+    $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+    if ($driver === 'mysql') {
+        $column = $db->query("SHOW COLUMNS FROM solicitudes LIKE 'oferta_id'")->fetch(PDO::FETCH_ASSOC);
+
+        if ($column && strtoupper((string) $column['Null']) === 'NO') {
+            $db->exec('ALTER TABLE solicitudes MODIFY oferta_id INT UNSIGNED NULL');
+        }
+
+        return;
+    }
+
+    $columns = $db->query('PRAGMA table_info(solicitudes)')->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($columns as $column) {
+        if ($column['name'] !== 'oferta_id' || (int) $column['notnull'] !== 1) {
+            continue;
+        }
+
+        $db->exec('PRAGMA foreign_keys = OFF');
+        $db->exec('ALTER TABLE solicitudes RENAME TO solicitudes_old');
+        $db->exec(
+            'CREATE TABLE solicitudes (
+                id INTEGER PRIMARY KEY,
+                usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+                oferta_id INTEGER REFERENCES ofertas(id),
+                proyecto_id INTEGER REFERENCES proyectos(id),
+                tipo TEXT NOT NULL,
+                nota TEXT NOT NULL,
+                respuesta TEXT NOT NULL DEFAULT "",
+                estado TEXT NOT NULL,
+                creado TEXT NOT NULL,
+                actualizado TEXT NOT NULL
+            )'
+        );
+        $db->exec('INSERT INTO solicitudes SELECT * FROM solicitudes_old');
+        $db->exec('DROP TABLE solicitudes_old');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_solicitudes_usuario ON solicitudes(usuario_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_solicitudes_oferta ON solicitudes(oferta_id)');
+        $db->exec('CREATE INDEX IF NOT EXISTS idx_solicitudes_proyecto ON solicitudes(proyecto_id)');
+        $db->exec('PRAGMA foreign_keys = ON');
+    }
 }
 
 function flow_mail_types()

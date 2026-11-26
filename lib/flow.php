@@ -1103,6 +1103,120 @@ function flow_create_request($db, $user, $input)
     return $db;
 }
 
+function flow_request_open_project($db, $user, $input)
+{
+    $nota = trim($input['nota'] ?? $input['descripcion'] ?? '');
+    $projectId = (int) ($input['proyectoId'] ?? 0);
+
+    if (strlen($nota) < 8) {
+        throw new FlowError('Cuéntanos qué necesitas, con un poco más de detalle.', 422);
+    }
+
+    if ($projectId) {
+        $row = flow_one($db, 'SELECT * FROM proyectos WHERE id = ?', [$projectId]);
+
+        if (!$row) {
+            throw new FlowError('No encontramos ese proyecto.', 404);
+        }
+
+        if (!empty($row['oferta_id'])) {
+            throw new FlowError('Este proyecto ya está ligado a una oferta.', 409);
+        }
+
+        if (!empty($row['usuario_principal_id']) && (int) $row['usuario_principal_id'] !== (int) $user['id']) {
+            throw new FlowError('Este proyecto ya tiene una persona asignada.', 409);
+        }
+
+        if (empty($row['usuario_principal_id'])) {
+            $now = flow_now();
+            flow_run(
+                $db,
+                'UPDATE proyectos SET usuario_principal_id = ?, actualizado = ?, ultima_actividad = ? WHERE id = ?',
+                [(int) $user['id'], $now, $now, $projectId]
+            );
+            flow_add_history($db, $projectId, null, $user['id'], $user['nombre'], $user['nombre'] . ' solicitó este proyecto.');
+        }
+
+        $nombre = $row['nombre'];
+    } else {
+        $nombre = trim($input['nombre'] ?? '');
+
+        if ($nombre === '') {
+            throw new FlowError('Escribe el nombre del proyecto.', 422);
+        }
+
+        $project = flow_new_project($db, [
+            'nombre' => $nombre,
+            'descripcion' => $nota,
+            'categoria' => 'solicitud',
+            'usuarioPrincipalId' => $user['id'],
+            'estado' => 'pendiente',
+            'actorId' => $user['id'],
+            'actorNombre' => $user['nombre'],
+            'historial' => 'Proyecto solicitado por ' . $user['nombre'] . ' sin oferta.',
+            'origen' => 'solicitud',
+        ]);
+        $projectId = $project['id'];
+        $nombre = $project['nombre'];
+    }
+
+    $open = flow_one(
+        $db,
+        "SELECT id FROM solicitudes
+            WHERE usuario_id = ? AND proyecto_id = ?
+            AND estado IN ('nueva', 'en_revision', 'informacion_adicional', 'cotizacion_enviada')",
+        [(int) $user['id'], $projectId]
+    );
+
+    if ($open) {
+        throw new FlowError('Ya tienes una solicitud abierta para este proyecto.', 409);
+    }
+
+    $now = flow_now();
+    flow_run(
+        $db,
+        'INSERT INTO solicitudes (usuario_id, oferta_id, proyecto_id, tipo, nota, respuesta, estado, creado, actualizado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [(int) $user['id'], null, $projectId, 'solicitar', flow_cut($nota, 4000), '', 'nueva', $now, $now]
+    );
+    $requestId = flow_id($db);
+    flow_add_history($db, $projectId, $requestId, $user['id'], $user['nombre'], 'Solicitud de proyecto registrada.');
+
+    $userLink = flow_url('portal.php?seccion=proyectos&id=' . $projectId);
+    $adminLink = flow_url('index.php?seccion=biblioteca&id=' . $projectId);
+
+    flow_notify($db, [
+        'userId' => $user['id'],
+        'tipo' => 'solicitud_recibida',
+        'titulo' => 'Solicitud recibida',
+        'mensaje' => 'Tu solicitud del proyecto ' . $nombre . ' fue recibida.',
+        'enlace' => $userLink,
+        'proyectoId' => $projectId,
+        'solicitudId' => $requestId,
+        'clave' => 'solicitud|user|' . $requestId . '|recibida',
+    ]);
+
+    foreach (flow_admins($db) as $admin) {
+        flow_notify($db, [
+            'userId' => $admin['id'],
+            'tipo' => 'solicitud_admin',
+            'titulo' => 'Nueva solicitud de proyecto',
+            'mensaje' => $user['nombre'] . ' solicitó el proyecto ' . $nombre . '.',
+            'enlace' => $adminLink,
+            'proyectoId' => $projectId,
+            'solicitudId' => $requestId,
+            'relacionUserId' => $user['id'],
+            'clave' => 'solicitud|admin|' . $admin['id'] . '|req|' . $requestId,
+            'correo' => $admin['correo'],
+            'asunto' => 'Nueva solicitud de proyecto',
+            'cuerpo' => $user['nombre'] . ' solicitó el proyecto ' . $nombre . ', sin oferta relacionada.',
+            'correoTipo' => 'solicitud',
+        ]);
+    }
+
+    return $db;
+}
+
 function flow_request_data($db, $id)
 {
     $row = flow_one($db, 'SELECT * FROM solicitudes WHERE id = ?', [(int) $id]);
@@ -1159,7 +1273,7 @@ function flow_set_request_status($db, $actor, $requestId, $estado, $nota)
 
     flow_add_history($db, null, $request['id'], $actor['id'], $actor['nombre'], $text);
 
-    if ($estado === 'aprobada' && empty($request['proyectoId']) && in_array($request['tipo'], ['solicitar', 'iniciar'], true)) {
+    if ($estado === 'aprobada' && empty($request['proyectoId']) && !empty($request['ofertaId']) && in_array($request['tipo'], ['solicitar', 'iniciar'], true)) {
         $offer = flow_offer($db, $request['ofertaId']);
         $owner = flow_user_by_id($db, $request['userId']);
         $project = flow_new_project($db, [
@@ -1193,7 +1307,15 @@ function flow_set_request_status($db, $actor, $requestId, $estado, $nota)
     }
 
     $owner = flow_user_by_id($db, $request['userId']);
-    $offer = flow_offer($db, $request['ofertaId']);
+    $subject = 'tu proyecto';
+
+    if (!empty($request['ofertaId'])) {
+        $subject = flow_offer($db, $request['ofertaId'])['nombre'];
+    } elseif (!empty($request['proyectoId'])) {
+        $linked = flow_one($db, 'SELECT nombre FROM proyectos WHERE id = ?', [(int) $request['proyectoId']]);
+        $subject = $linked['nombre'] ?? $subject;
+    }
+
     $projectId = flow_request_data($db, $request['id'])['proyectoId'];
     $link = $projectId
         ? flow_url('portal.php?seccion=proyectos&id=' . $projectId)
@@ -1201,8 +1323,8 @@ function flow_set_request_status($db, $actor, $requestId, $estado, $nota)
     $tipo = $estado === 'informacion_adicional' ? 'informacion_adicional' : 'cambio_estado';
     $titulo = $estado === 'informacion_adicional' ? 'Información adicional requerida' : 'Actualización de tu solicitud';
     $mensaje = $estado === 'informacion_adicional'
-        ? 'Necesitamos información adicional sobre tu solicitud para ' . $offer['nombre'] . '.'
-        : 'Tu solicitud para ' . $offer['nombre'] . ' ahora está: ' . $label . '.';
+        ? 'Necesitamos información adicional sobre tu solicitud para ' . $subject . '.'
+        : 'Tu solicitud para ' . $subject . ' ahora está: ' . $label . '.';
 
     if ($nota !== '') {
         $mensaje .= ' ' . $nota;
@@ -1683,7 +1805,7 @@ function flow_present_request($db, $row)
         'creado' => $row['creado'],
         'actualizado' => $row['actualizado'],
         'historial' => $historial,
-        'ofertaNombre' => $row['oferta_nombre'] ?? 'Oferta no disponible',
+        'ofertaNombre' => $row['oferta_nombre'] ?: ($row['proyecto_nombre'] ?? 'Sin oferta'),
         'usuarioNombre' => $row['usuario_nombre'] ?? 'Usuario',
         'usuarioCorreo' => $row['usuario_correo'] ?? '',
         'proyectoNombre' => $row['proyecto_nombre'] ?? null,
@@ -1698,7 +1820,7 @@ function flow_request_rows($db, $where, $params)
                 o.nombre AS oferta_nombre, p.nombre AS proyecto_nombre
          FROM solicitudes s
          JOIN usuarios u ON u.id = s.usuario_id
-         JOIN ofertas o ON o.id = s.oferta_id
+         LEFT JOIN ofertas o ON o.id = s.oferta_id
          LEFT JOIN proyectos p ON p.id = s.proyecto_id
          ' . $where . '
          ORDER BY s.id',
@@ -1824,6 +1946,7 @@ function flow_bootstrap($db, $user)
         : 'SELECT DISTINCT p.* FROM proyectos p
             LEFT JOIN proyecto_usuarios pu ON pu.proyecto_id = p.id
             WHERE p.usuario_principal_id = ? OR pu.usuario_id = ?
+                OR (p.oferta_id IS NULL AND p.usuario_principal_id IS NULL)
             ORDER BY p.id';
     $projectParams = $admin ? [] : [(int) $user['id'], (int) $user['id']];
 
