@@ -89,7 +89,7 @@ async function sendPushNotification(title, body) {
 
 
 
-const VAPID_PUBLIC_KEY = "BFngvYCuGcFIVt7rVUM6M8PCw6GrOWVDLtAeZH3_2hs_FjeEVuqzKAVfK7FqeHTM8arMokBv7DqGBOKPfXdfnIY";
+const VAPID_PUBLIC_KEY = "BOpxmyj8Iu3z1kjB1h0FUj32jvOwAjrSeCurj8FCTzjZ-t2tQ7XZoilHSvmf0B8_ZJPp0EUg4AR4FUmkXq6K9WA";
 
 function urlBase64ToUint8Array(base64String) {
 

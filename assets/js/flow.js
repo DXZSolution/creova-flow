@@ -237,7 +237,7 @@ function sameOrigin(enlace) {
     return url.pathname + url.search + url.hash;
 }
 
-const VAPID_PUBLIC_KEY = "BFngvYCuGcFIVt7rVUM6M8PCw6GrOWVDLtAeZH3_2hs_FjeEVuqzKAVfK7FqeHTM8arMokBv7DqGBOKPfXdfnIY";
+const VAPID_PUBLIC_KEY = "BOpxmyj8Iu3z1kjB1h0FUj32jvOwAjrSeCurj8FCTzjZ-t2tQ7XZoilHSvmf0B8_ZJPp0EUg4AR4FUmkXq6K9WA";
 
 function urlBase64ToUint8Array(base64String) {
     const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -259,12 +259,30 @@ async function activatePush() {
     }
 
     const registration = await navigator.serviceWorker.ready;
+    const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
     let subscription = await registration.pushManager.getSubscription();
 
-    if (!subscription) {
+    if (subscription) {
+        await subscription.unsubscribe();
+    }
+
+    try {
         subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            applicationServerKey
+        });
+    } catch (error) {
+        const message = String(error && error.message || "");
+
+        if (message.indexOf("push service") === -1) {
+            throw error;
+        }
+
+        const fresh = await navigator.serviceWorker.register("service-worker.js");
+        await navigator.serviceWorker.ready;
+        subscription = await fresh.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey
         });
     }
 
@@ -272,7 +290,7 @@ async function activatePush() {
         await FlowApi.request("session");
     }
 
-    const response = await fetch("push/subscribe.php", {
+    const response = await fetch("push/subscribe.php?v=12", {
         method: "POST",
         credentials: "same-origin",
         headers: {
@@ -280,7 +298,7 @@ async function activatePush() {
             "X-Creova-Token": FlowApi.token
         },
         body: new URLSearchParams({
-            payload: btoa(unescape(encodeURIComponent(JSON.stringify(subscription))))
+            payload: btoa(unescape(encodeURIComponent(JSON.stringify(subscription.toJSON()))))
         })
     });
     const raw = await response.text();

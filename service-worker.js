@@ -1,4 +1,4 @@
-const CACHE_NAME = "creova-flow-v10";
+const CACHE_NAME = "creova-flow-v11";
 
 const APP_SHELL = [
     "./shell-admin.html",

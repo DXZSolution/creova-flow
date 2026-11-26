@@ -87,7 +87,7 @@ if ($current) {
     </section>
 </main>
 
-<script src="assets/js/flow.js?v=9"></script>
+<script src="assets/js/flow.js?v=12"></script>
 <script src="assets/js/acceso.js"></script>
 </body>
 </html>
