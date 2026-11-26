@@ -1471,15 +1471,28 @@ function flow_apply_project_status($db, $actor, $projectId, $estado, $nota)
 
     if (!isset($seen[(int) $actor['id']])) {
         $people[] = $actor;
+        $seen[(int) $actor['id']] = true;
+    }
+
+    foreach (flow_admins($db) as $admin) {
+        if (!isset($seen[(int) $admin['id']])) {
+            $people[] = $admin;
+            $seen[(int) $admin['id']] = true;
+        }
     }
 
     foreach ($people as $person) {
         $completed = $estado === 'completado';
         $tipo = $completed ? 'proyecto_completado' : 'cambio_estado';
-        $titulo = $completed ? 'Proyecto completado' : 'Actualización de tu proyecto';
-        $mensaje = $completed
-            ? 'El proyecto ' . $project['nombre'] . ' fue marcado como completado.'
-            : 'El proyecto ' . $project['nombre'] . ' ahora está: ' . $label . '.';
+        $otherAdmin = ($person['rol'] ?? '') === 'admin' && (int) $person['id'] !== (int) $actor['id'];
+        $titulo = $otherAdmin
+            ? 'Cambio de estado'
+            : ($completed ? 'Proyecto completado' : 'Actualización de tu proyecto');
+        $mensaje = $otherAdmin
+            ? $actor['nombre'] . ' cambió el proyecto ' . $project['nombre'] . '. Ahora está: ' . $label . '.'
+            : ($completed
+                ? 'El proyecto ' . $project['nombre'] . ' fue marcado como completado.'
+                : 'El proyecto ' . $project['nombre'] . ' ahora está: ' . $label . '.');
 
         if ($nota !== '') {
             $mensaje .= ' ' . $nota;
