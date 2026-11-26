@@ -76,11 +76,90 @@ function applyQuery() {
     }
 }
 
+function localProjectFromPending(row) {
+    const body = row.body || {};
+    const users = state.data.users || [];
+    const offers = state.data.offers || [];
+    const user = users.find(item => item.id === Number(body.usuarioPrincipalId));
+    const offer = offers.find(item => item.id === Number(body.ofertaId));
+
+    return {
+        id: "pendiente-" + row.id,
+        pendingId: row.id,
+        localOnly: true,
+        nombre: body.nombre || "Proyecto sin nombre",
+        categoria: body.categoria || "",
+        descripcion: body.descripcion || "",
+        estado: body.estado || "pendiente",
+        oferta: offer ? { id: offer.id, nombre: offer.nombre } : null,
+        usuarioPrincipal: user ? { id: user.id, nombre: user.nombre } : null,
+        suscritos: 0,
+        suscriptoresDetalle: [],
+        solicitudes: [],
+        solicitudesPendientes: 0,
+        notificaciones: [],
+        comentarios: [],
+        historial: [],
+        creado: row.createdAt,
+        ultimaActividad: row.createdAt
+    };
+}
+
+async function readPendingProjects() {
+    if (typeof openDatabase !== "function") {
+        return [];
+    }
+
+    await openDatabase();
+    const rows = await getPending();
+
+    return rows.filter(row => row.tipo === "project");
+}
+
+async function mergePendingProjects() {
+    if (!state.data) {
+        return;
+    }
+
+    const locals = (await readPendingProjects()).map(localProjectFromPending);
+    const server = (state.data.projects || []).filter(item => !item.localOnly);
+    state.data.projects = server.concat(locals);
+}
+
+async function flushPendingProjects() {
+    const rows = await readPendingProjects();
+    let sent = 0;
+
+    for (const row of rows) {
+        try {
+            await FlowApi.request("project", { method: "POST", body: row.body });
+            await removePending(row.id);
+            sent += 1;
+        } catch (error) {
+            if (error.offline) {
+                break;
+            }
+
+            showAlert(error.message);
+            break;
+        }
+    }
+
+    return sent;
+}
+
 async function refresh() {
     state.data = await FlowApi.request("bootstrap");
     if (state.data.offline) {
         showOfflineNotice();
+    } else {
+        const sent = await flushPendingProjects();
+        if (sent > 0) {
+            state.data = await FlowApi.request("bootstrap");
+            showAlert("Se subieron " + sent + " proyectos guardados sin conexión.", true);
+        }
     }
+    await mergePendingProjects();
     setUnread(state.data.notifications.filter(item => !item.leida).length);
     document.getElementById("currentUserName").textContent = state.data.user.nombre;
     paintSection();
@@ -630,6 +709,14 @@ function deleteProjectButton(project, className) {
         }
         try {
             state.projectId = 0;
+            if (project.localOnly) {
+                await openDatabase();
+                await removePending(project.pendingId);
+                state.data.projects = state.data.projects.filter(item => item.pendingId !== project.pendingId);
+                render();
+                showAlert("Se quitó el proyecto guardado en este dispositivo.", true);
+                return;
+            }
             await run("project-delete", { id: project.id });
         } catch (error) {
             showAlert(error.message);
@@ -976,21 +1063,52 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     document.getElementById("projectForm").addEventListener("submit", async event => {
         event.preventDefault();
-        const id = document.getElementById("projectId").value;
+        const rawId = document.getElementById("projectId").value;
+        const localId = rawId.indexOf("pendiente-") === 0 ? Number(rawId.slice("pendiente-".length)) : 0;
+        const body = {
+            id: localId ? 0 : (rawId ? Number(rawId) : 0),
+            nombre: document.getElementById("projectName").value,
+            categoria: document.getElementById("projectCategory").value,
+            descripcion: document.getElementById("projectDescription").value,
+            ofertaId: Number(document.getElementById("projectOffer").value || 0),
+            usuarioPrincipalId: Number(document.getElementById("projectUser").value || 0),
+            estado: document.getElementById("projectStatus").value
+        };
         try {
-            await run("project", {
-                id: id ? Number(id) : 0,
-                nombre: document.getElementById("projectName").value,
-                categoria: document.getElementById("projectCategory").value,
-                descripcion: document.getElementById("projectDescription").value,
-                ofertaId: Number(document.getElementById("projectOffer").value || 0),
-                usuarioPrincipalId: Number(document.getElementById("projectUser").value || 0),
-                estado: document.getElementById("projectStatus").value
-            });
+            await run("project", body);
+            if (localId) {
+                await openDatabase();
+                await removePending(localId);
+            }
             bootstrap.Modal.getOrCreateInstance(document.getElementById("projectModal")).hide();
             state.section = "proyectos";
             paintSection();
         } catch (error) {
+            if (error.offline && !body.id) {
+                try {
+                    await openDatabase();
+                    const item = {
+                        tipo: "project",
+                        body,
+                        createdAt: new Date().toISOString()
+                    };
+                    if (localId) {
+                        item.id = localId;
+                        await updatePending(item);
+                    } else {
+                        await savePending(item);
+                    }
+                    await mergePendingProjects();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById("projectModal")).hide();
+                    state.section = "proyectos";
+                    paintSection();
+                    showOfflineNotice();
+                    showAlert("Proyecto guardado en este dispositivo. Se subirá cuando vuelva la conexión.", true);
+                } catch (saveError) {
+                    showAlert(saveError.message);
+                }
+                return;
+            }
             showAlert(error.message);
         }
     });
@@ -1028,6 +1146,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         applyQuery();
         await refresh();
+        window.addEventListener("online", () => {
+            refresh().catch(error => showAlert(error.message));
+        });
         const imported = session.offline ? 0 : await importLocalProjectsOnce();
         if (imported > 0) {
             showAlert("Se importaron " + imported + " proyectos de este navegador.", true);

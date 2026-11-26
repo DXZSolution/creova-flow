@@ -99,3 +99,39 @@ function deleteProject(id) {
         request.onerror = () => reject(request.error);
     });
 }
+
+function savePending(item) {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction("pendientes", "readwrite").objectStore("pendientes").add(item);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function getPending() {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction("pendientes", "readonly").objectStore("pendientes").getAll();
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function updatePending(item) {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction("pendientes", "readwrite").objectStore("pendientes").put(item);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function removePending(id) {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction("pendientes", "readwrite").objectStore("pendientes").delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
