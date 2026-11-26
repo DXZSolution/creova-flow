@@ -1,16 +1,34 @@
-const CACHE_NAME = "creova-flow-v9";
+const CACHE_NAME = "creova-flow-v10";
 
 const APP_SHELL = [
+    "./shell-admin.html",
+    "./shell-portal.html",
     "./offline.html",
     "./manifest.json",
     "./assets/css/style.css",
     "./assets/css/bootstrap.min.css",
     "./assets/js/bootstrap.bundle.min.js",
     "./assets/js/flow.js",
+    "./assets/js/admin.js",
+    "./assets/js/portal.js",
     "./assets/js/db.js",
     "./icons/icon-192.png",
     "./icons/icon-512.png"
 ];
+
+function shellFor(url) {
+    const path = url.pathname;
+
+    if (path.endsWith("/index.php")) {
+        return "./shell-admin.html";
+    }
+
+    if (path.endsWith("/portal.php")) {
+        return "./shell-portal.html";
+    }
+
+    return "";
+}
 
 self.addEventListener("install", event => {
     event.waitUntil(
@@ -45,6 +63,13 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+    const shell = request.mode === "navigate" ? shellFor(url) : "";
+
+    if (shell) {
+        event.respondWith(serveShell(shell, request));
+        return;
+    }
+
     if (url.pathname.indexOf("/api/") !== -1 || url.pathname.endsWith(".php") || url.pathname.endsWith(".js")) {
         event.respondWith(networkFirst(request));
         return;
@@ -53,11 +78,31 @@ self.addEventListener("fetch", event => {
     event.respondWith(fromCacheFirst(request));
 });
 
+async function serveShell(shell, request) {
+    const cached = await caches.match(shell);
+
+    if (cached) {
+        return cached;
+    }
+
+    try {
+        return await fetch(request);
+    } catch (error) {
+        const offlinePage = await caches.match("./offline.html");
+
+        if (offlinePage) {
+            return offlinePage;
+        }
+
+        throw error;
+    }
+}
+
 async function networkFirst(request) {
     try {
         return await fetch(request);
     } catch (error) {
-        const cached = await caches.match(request);
+        const cached = await caches.match(request, { ignoreSearch: true });
 
         if (cached) {
             return cached;
@@ -76,7 +121,7 @@ async function networkFirst(request) {
 }
 
 async function fromCacheFirst(request) {
-    const cached = await caches.match(request);
+    const cached = await caches.match(request, { ignoreSearch: true });
 
     if (cached) {
         return cached;

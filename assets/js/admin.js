@@ -1007,6 +1007,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     try {
+        const session = await FlowApi.request("session");
+
+        if (!session.user) {
+            window.location.href = "inicio.php";
+            return;
+        }
+
+        if (session.user.rol !== "admin") {
+            window.location.href = "portal.php";
+            return;
+        }
+
         applyQuery();
         await refresh();
         const imported = await importLocalProjectsOnce();

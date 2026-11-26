@@ -556,6 +556,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     try {
+        const session = await FlowApi.request("session");
+
+        if (!session.user) {
+            window.location.href = "acceso.php";
+            return;
+        }
+
+        if (session.user.rol === "admin") {
+            window.location.href = "index.php";
+            return;
+        }
+
         applyQuery();
         await refresh();
     } catch (error) {
