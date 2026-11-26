@@ -1340,11 +1340,18 @@ function flow_apply_project_status($db, $actor, $projectId, $estado, $nota)
 
     flow_add_history($db, $projectId, null, $actor['id'], $actor['nombre'], $text);
 
-    foreach (flow_project_recipients($db, $projectId) as $person) {
-        if ((int) $person['id'] === (int) $actor['id']) {
-            continue;
-        }
+    $people = flow_project_recipients($db, $projectId);
+    $seen = [];
 
+    foreach ($people as $person) {
+        $seen[(int) $person['id']] = true;
+    }
+
+    if (!isset($seen[(int) $actor['id']])) {
+        $people[] = $actor;
+    }
+
+    foreach ($people as $person) {
         $completed = $estado === 'completado';
         $tipo = $completed ? 'proyecto_completado' : 'cambio_estado';
         $titulo = $completed ? 'Proyecto completado' : 'Actualización de tu proyecto';
@@ -1365,7 +1372,9 @@ function flow_apply_project_status($db, $actor, $projectId, $estado, $nota)
             'tipo' => $tipo,
             'titulo' => $titulo,
             'mensaje' => flow_cut($mensaje, 500),
-            'enlace' => flow_url('portal.php?seccion=proyectos&id=' . $projectId),
+            'enlace' => ($person['rol'] ?? '') === 'admin'
+                ? flow_url('index.php?seccion=biblioteca&id=' . $projectId)
+                : flow_url('portal.php?seccion=proyectos&id=' . $projectId),
             'ofertaId' => $project['oferta_id'],
             'proyectoId' => (int) $projectId,
             'clave' => $clave,
