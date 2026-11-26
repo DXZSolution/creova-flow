@@ -579,7 +579,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         await refresh();
     } catch (error) {
         if (error.offline) {
-            window.location.href = "acceso.php";
+            showOfflineNotice();
+            showAlert("Sin conexión. Entra una vez con internet para guardar los datos en este dispositivo.");
             return;
         }
 

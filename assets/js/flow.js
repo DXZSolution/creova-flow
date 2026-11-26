@@ -184,6 +184,10 @@ const FlowApi = {
 
         if (action === "logout" && response.ok) {
             localStorage.removeItem(OFFLINE_KEY);
+
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage("clear-data");
+            }
         }
 
         if (response.status === 401) {
@@ -274,6 +278,10 @@ function showAlert(message, ok) {
 
     if (!box) {
         return;
+    }
+
+    if (!ok && message === "Failed to fetch") {
+        message = "Sin conexión. No se pudieron cargar los datos.";
     }
 
     box.textContent = message || "";

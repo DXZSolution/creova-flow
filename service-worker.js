@@ -1,8 +1,8 @@
-const CACHE_NAME = "creova-flow-v12";
+const CACHE_NAME = "creova-flow-v13";
 
 const PRECACHE = [
     ["./inicio.php", "./inicio.php?v=12"],
-    ["./shell-admin.html", "./shell-admin.html?v=12"],
+    ["./shell-admin.html", "./shell-admin.html?v=13"],
     ["./shell-portal.html", "./shell-portal.html?v=12"],
     ["./shell-acceso.html", "./shell-acceso.html?v=12"],
     ["./offline.html", "./offline.html?v=12"],
@@ -11,9 +11,9 @@ const PRECACHE = [
     ["./assets/css/bootstrap.min.css", "./assets/css/bootstrap.min.css?v=12"],
     ["./assets/css/landing.css", "./assets/css/landing.css?v=12"],
     ["./assets/js/bootstrap.bundle.min.js", "./assets/js/bootstrap.bundle.min.js?v=12"],
-    ["./assets/js/flow.js?v=13", "./assets/js/flow.js?v=13"],
-    ["./assets/js/admin.js?v=12", "./assets/js/admin.js?v=12"],
-    ["./assets/js/portal.js?v=11", "./assets/js/portal.js?v=11"],
+    ["./assets/js/flow.js?v=14", "./assets/js/flow.js?v=14"],
+    ["./assets/js/admin.js?v=13", "./assets/js/admin.js?v=13"],
+    ["./assets/js/portal.js?v=12", "./assets/js/portal.js?v=12"],
     ["./assets/js/acceso.js?v=2", "./assets/js/acceso.js?v=2"],
     ["./assets/js/db.js", "./assets/js/db.js?v=12"],
     ["./assets/images/hero-creova.jpg", "./assets/images/hero-creova.jpg?v=12"],
@@ -53,7 +53,11 @@ self.addEventListener("install", event => {
         await Promise.all(PRECACHE.map(async pair => {
             const stored = pair[0];
             const fresh = pair[1];
-            const response = await fetch(fresh, { cache: "reload" });
+            let response = await fetch(fresh, { cache: "reload" });
+
+            if (!response.ok && fresh !== stored) {
+                response = await fetch(stored, { cache: "reload" });
+            }
 
             if (!response.ok) {
                 throw new Error(stored);
@@ -91,7 +95,17 @@ self.addEventListener("fetch", event => {
         return;
     }
 
-    if (url.pathname.indexOf("/api/") !== -1 || url.pathname.indexOf("/push/") !== -1) {
+    if (url.pathname.indexOf("/api/") !== -1) {
+        const action = url.searchParams.get("action");
+
+        if (action === "session" || action === "bootstrap") {
+            event.respondWith(dataFirst(request));
+        }
+
+        return;
+    }
+
+    if (url.pathname.indexOf("/push/") !== -1) {
         return;
     }
 
@@ -108,6 +122,51 @@ self.addEventListener("fetch", event => {
     }
 
     event.respondWith(fromCacheFirst(request));
+});
+
+async function dataFirst(request) {
+    const cache = await caches.open(CACHE_NAME);
+
+    try {
+        const response = await fetch(request);
+
+        if (response && response.ok) {
+            const data = await response.clone().json().catch(() => null);
+
+            if (data && data.user) {
+                await cache.put(request, response.clone());
+            } else if (data && data.user === null) {
+                const keys = await cache.keys();
+                await Promise.all(keys
+                    .filter(key => key.url.indexOf("/api/") !== -1)
+                    .map(key => cache.delete(key)));
+            }
+        }
+
+        return response;
+    } catch (error) {
+        const cached = await cache.match(request);
+
+        if (cached) {
+            return cached;
+        }
+
+        throw error;
+    }
+}
+
+self.addEventListener("message", event => {
+    if (event.data !== "clear-data") {
+        return;
+    }
+
+    event.waitUntil((async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const keys = await cache.keys();
+        await Promise.all(keys
+            .filter(key => key.url.indexOf("/api/") !== -1)
+            .map(key => cache.delete(key)));
+    })());
 });
 
 async function serveAppPage(event, page) {
