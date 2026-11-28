@@ -158,6 +158,14 @@ async function refresh() {
             state.data = await FlowApi.request("bootstrap");
             showAlert("Se subieron " + sent + " proyectos guardados sin conexión.", true);
         }
+        const imported = await importLocalProjectsOnce();
+        if (imported > 0) {
+            state.data = await FlowApi.request("bootstrap");
+            showAlert("Se importaron " + imported + " proyectos de este navegador.", true);
+        }
+        if (localStorage.getItem("creovaLocalImported") === "1") {
+            await storeServerProjects(state.data.projects || []);
+        }
     }
     await mergePendingProjects();
     setUnread(state.data.notifications.filter(item => !item.leida).length);
@@ -973,6 +981,21 @@ function openProjectForm(project) {
     bootstrap.Modal.getOrCreateInstance(document.getElementById("projectModal")).show();
 }
 
+async function storeServerProjects(projects) {
+    if (typeof openDatabase !== "function" || typeof replaceProjects !== "function") {
+        return;
+    }
+
+    try {
+        await openDatabase();
+        await replaceProjects(projects.filter(project => project && !project.localOnly).map(project => {
+            return Object.assign({}, project, { copiaServidor: true });
+        }));
+    } catch (error) {
+        console.warn(error);
+    }
+}
+
 async function importLocalProjectsOnce() {
     if (localStorage.getItem("creovaLocalImported") === "1" || typeof openDatabase !== "function") {
         return 0;
@@ -980,7 +1003,7 @@ async function importLocalProjectsOnce() {
 
     try {
         await openDatabase();
-        const projects = await getProjects();
+        const projects = (await getProjects()).filter(project => !project.copiaServidor);
         if (!projects.length) {
             localStorage.setItem("creovaLocalImported", "1");
             return 0;
@@ -1149,11 +1172,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.addEventListener("online", () => {
             refresh().catch(error => showAlert(error.message));
         });
-        const imported = session.offline ? 0 : await importLocalProjectsOnce();
-        if (imported > 0) {
-            showAlert("Se importaron " + imported + " proyectos de este navegador.", true);
-            await refresh();
-        }
     } catch (error) {
         if (error.offline) {
             showOfflineNotice();

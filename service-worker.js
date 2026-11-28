@@ -1,8 +1,8 @@
-const CACHE_NAME = "creova-flow-v15";
+const CACHE_NAME = "creova-flow-v16";
 
 const PRECACHE = [
     ["./inicio.php", "./inicio.php?v=12"],
-    ["./shell-admin.html", "./shell-admin.html?v=14"],
+    ["./shell-admin.html", "./shell-admin.html?v=15"],
     ["./shell-portal.html", "./shell-portal.html?v=13"],
     ["./shell-acceso.html", "./shell-acceso.html?v=12"],
     ["./offline.html", "./offline.html?v=12"],
@@ -12,10 +12,10 @@ const PRECACHE = [
     ["./assets/css/landing.css", "./assets/css/landing.css?v=12"],
     ["./assets/js/bootstrap.bundle.min.js", "./assets/js/bootstrap.bundle.min.js?v=12"],
     ["./assets/js/flow.js?v=14", "./assets/js/flow.js?v=14"],
-    ["./assets/js/admin.js?v=15", "./assets/js/admin.js?v=15"],
+    ["./assets/js/admin.js?v=16", "./assets/js/admin.js?v=16"],
     ["./assets/js/portal.js?v=13", "./assets/js/portal.js?v=13"],
     ["./assets/js/acceso.js?v=2", "./assets/js/acceso.js?v=2"],
-    ["./assets/js/db.js?v=13", "./assets/js/db.js?v=13"],
+    ["./assets/js/db.js?v=14", "./assets/js/db.js?v=14"],
     ["./assets/images/hero-creova.jpg", "./assets/images/hero-creova.jpg?v=12"],
     ["./assets/images/portfolio-video.jpg", "./assets/images/portfolio-video.jpg?v=12"],
     ["./assets/images/portfolio-image.jpg", "./assets/images/portfolio-image.jpg?v=12"],

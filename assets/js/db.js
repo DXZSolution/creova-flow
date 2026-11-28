@@ -100,6 +100,21 @@ function deleteProject(id) {
     });
 }
 
+function replaceProjects(projects) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction("proyectos", "readwrite");
+        const store = transaction.objectStore("proyectos");
+
+        store.clear();
+        projects.forEach(project => {
+            store.put(project);
+        });
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+    });
+}
+
 function savePending(item) {
     return new Promise((resolve, reject) => {
         const request = db.transaction("pendientes", "readwrite").objectStore("pendientes").add(item);
